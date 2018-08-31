@@ -1,0 +1,16 @@
+= Cheatsheets
+
+[[Transaction]]
+== Transaction
+
+
+[cols=">25%,^25%,50%"]
+[frame="topbot"]
+|===
+^|Name | Type ^| Description
+|[[txAmount]]`txAmount`|`Number (double)`|-
+|[[txFrom]]`txFrom`|`String`|-
+|[[txStatus]]`txStatus`|`Boolean`|-
+|[[txTo]]`txTo`|`String`|-
+|===
+

@@ -1,0 +1,5 @@
+rootProject.name = 'microbanking-model'
+
+include 'lastochka'
+include 'microbank'
+include 'mimoza'

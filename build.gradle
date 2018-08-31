@@ -1,0 +1,95 @@
+configure(allprojects) { project ->
+
+    ext {
+        vertxVersion = "3.5.3"
+    }
+
+    apply plugin: 'java'
+
+    repositories {
+        jcenter()
+    }
+
+    dependencies {
+        compile "io.vertx:vertx-core:$vertxVersion"
+        compile "io.vertx:vertx-hazelcast:$vertxVersion"
+        compile "io.vertx:vertx-rx-java2:$vertxVersion"
+        compile "io.vertx:vertx-service-discovery:$vertxVersion"
+        compile "io.vertx:vertx-web:$vertxVersion"
+        compile "io.vertx:vertx-web-client:$vertxVersion"
+
+        compileOnly "io.vertx:vertx-codegen:$vertxVersion"
+    }
+
+    sourceSets {
+        main {
+            java {
+                srcDirs += 'src/main/generated'
+            }
+        }
+    }
+
+    compileJava {
+        targetCompatibility = 1.8
+        sourceCompatibility = 1.8
+    }
+}
+
+project("lastochka") {
+
+    dependencies {
+        compile project(':microbank')
+    }
+
+    jar {
+        archiveName = 'lastochka.jar'
+        from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+        manifest {
+            attributes 'Main-Class': 'io.vertx.core.Launcher'
+            attributes 'Main-Verticle': 'io.lastochka.LastochkaVerticle'
+        }
+    }
+}
+
+project("microbank") {
+
+    jar {
+        archiveName = 'microbank.jar'
+        from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    }
+
+    task annotationProcessing(type: JavaCompile, group: 'build') {
+        source = sourceSets.main.java
+        classpath = configurations.compile + configurations.compileOnly
+        destinationDir = project.file('src/main/generated')
+        options.compilerArgs = [
+                "-proc:only",
+                "-processor", "io.vertx.codegen.CodeGenProcessor",
+                "-Acodegen.output=${project.projectDir}/src/main"
+        ]
+    }
+
+    compileJava {
+        dependsOn annotationProcessing
+    }
+}
+
+project("mimoza") {
+
+    dependencies {
+        compile project(':microbank')
+    }
+
+    jar {
+        archiveName = 'mimoza.jar'
+        from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+        manifest {
+            attributes 'Main-Class': 'io.vertx.core.Launcher'
+            attributes 'Main-Verticle': 'io.mimoza.MimozaVerticle'
+        }
+    }
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '4.9'
+}

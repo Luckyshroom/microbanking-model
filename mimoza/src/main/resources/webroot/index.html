@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ПАО Банк "Мимоза"</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" type="image/png" href="http://vertx.io/assets/favicons/vertx-favicon-7/favicon-32x32.png">
+    <link rel="manifest" href="public/manifest.json">
+    <link rel="stylesheet" href="public/css/illumi.css">
+    <script src="public/lib/babel.min.js"></script>
+    <script src="public/lib/react.production.min.js"></script>
+    <script src="public/lib/react-dom.production.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+    const MIMOZA_API = 'http://localhost:8002/api/mimoza';
+
+    const request = (options) => {
+        const headers = new Headers({
+            'Content-Type': 'application/json',
+        });
+
+        const defaults = {headers: headers};
+        options = Object.assign({}, defaults, options);
+
+        return fetch(options.url, options)
+            .then(response => response.json()
+                .then(json => {
+                    return json;
+                })
+            )
+    };
+
+    class App extends React.Component {
+        constructor(props) {
+            super(props);
+            this.state = {
+                accounts: [],
+                bankAmount: null,
+                bankName: null,
+                bankNumber: null,
+                isAccounts: true,
+                transactions: []
+            };
+            this.txAmount = React.createRef();
+            this.txFrom = React.createRef();
+            this.txTo = React.createRef();
+        }
+
+        componentDidMount() {
+            this.fetchAccountList();
+            this.fetchTxList();
+            this.fetchInfo();
+        }
+
+        componentDidUpdate(prevProps, prevState) {
+            if (this.state.transactions !== prevState.transactions) {
+                this.fetchAccountList();
+                this.fetchInfo();
+            }
+        }
+
+        dispatchTransaction = () => {
+            const txData = {
+                isDelegated: false,
+                txAmount: parseFloat(this.txAmount.current.value),
+                txFrom: this.txFrom.current.value,
+                txTo: this.txTo.current.value
+            };
+
+            let promise = request({
+                url: MIMOZA_API + "/transaction",
+                method: 'POST',
+                body: JSON.stringify(txData)
+            });
+
+            if(!promise) {
+                return;
+            }
+
+            promise.then(response => {
+                this.setState({transactions: this.state.transactions.concat(response)})
+            }).catch(e => {
+                console.log(e);
+            });
+        };
+
+        fetchAccountList = () => {
+            let promise = request({
+                url: MIMOZA_API + "/accounts",
+                method: 'GET'
+            });
+
+            if(!promise) {
+                return;
+            }
+
+            promise.then(response => {
+                this.setState({accounts: response})
+            }).catch(e => {
+                console.log(e);
+            });
+        };
+
+        fetchTxList = () => {
+            let promise = request({
+                url: MIMOZA_API + "/transactions",
+                method: 'GET'
+            });
+
+            if(!promise) {
+                return;
+            }
+
+            promise.then(response => {
+                this.setState({transactions: response})
+            }).catch(e => {
+                console.log(e);
+            });
+        };
+
+        fetchInfo = () => {
+            let promise = request({
+                url: MIMOZA_API + "/info",
+                method: 'GET'
+            });
+
+            if(!promise) {
+                return;
+            }
+
+            promise.then(response => {
+                this.setState({
+                    bankName: response.bankName,
+                    bankAmount: response.bankAmount,
+                    bankNumber: response.bankNumber
+                })
+            }).catch(e => {
+                console.log(e);
+            });
+        };
+
+        handleTab = (e) => {
+            switch (e.currentTarget.getAttribute('id')) {
+                case 'accounts':
+                    this.setState({isAccounts: true});
+                    break;
+                case 'transactions':
+                    this.setState({isAccounts: false});
+                    break;
+                default:
+                    break;
+            }
+        };
+
+        render() {
+            let {accounts, bankAmount, transactions, isAccounts} = this.state;
+
+            let accountList = (accounts.length !== 0) ? accounts.map((account, index) =>
+                    <tr key={index}>
+                        <th>{index + 1}</th>
+                        <td>{account.holder}</td>
+                        <td>{account.number}</td>
+                        <td>{account.amount.toFixed(2)}$</td>
+                    </tr>
+            ) : null;
+
+            let txList = (transactions.length !== 0) ? transactions.map((transaction, index) =>
+                <tr key={index}>
+                    <th>{index + 1}</th>
+                    <td>{transaction.txFrom}</td>
+                    <td>{transaction.txTo}</td>
+                    <td>{transaction.txAmount.toFixed(2)}$</td>
+                    <td>{transaction.txStatus ? "Success" : "Fail"}</td>
+                </tr>
+            ) : null;
+
+            return (
+                <div className="column">
+                    <div className="level" style={{marginTop: 24}}>
+                        <h1 className="title level-left">ПАО Банк "Мимоза"</h1>
+                        <h1 className="title level-right">Баланс: {parseFloat(bankAmount).toFixed(2)}$</h1>
+                    </div>
+                    <div className="tabs">
+                        <ul>
+                            <li className={this.state.isAccounts ? 'is-active' : null}>
+                                <a id="accounts" onClick={this.handleTab}>
+                                    <span className="icon">
+                                        <i className="fas fa-file" aria-hidden="true"/>
+                                    </span>
+                                    <span>Счета</span>
+                                </a>
+                            </li>
+                            <li className={!this.state.isAccounts ? 'is-active' : null}>
+                                <a id="transactions" onClick={this.handleTab}>
+                                    <span className="icon">
+                                        <i className="fas fa-exchange" aria-hidden="true"/>
+                                    </span>
+                                    <span>Транзакции</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                    {isAccounts ?
+                        <table className="table">
+                            <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Держатель</th>
+                                <th>Номер счёта</th>
+                                <th>Остаток по счёту</th>
+                            </tr>
+                            </thead>
+                            <tbody>{accountList}</tbody>
+                        </table> : null}
+                    {!isAccounts ?
+                        <div>
+                            <div className="field">
+                                <label className="label">Отправитель</label>
+                                <input className="input" placeholder="Счет отпраителя" ref={this.txFrom}
+                                       onInput={this.onInput}/>
+                            </div>
+                            <div className="field">
+                                <label className="label">Получатель</label>
+                                <input className="input" placeholder="Счет получателя" ref={this.txTo}/>
+                            </div>
+                            <div className="level">
+                                <div className="field">
+                                    <label className="label">Сумма</label>
+                                    <input className="input" placeholder="$" ref={this.txAmount}/>
+                                </div>
+                                <button className="button is-success"
+                                        onClick={this.dispatchTransaction}>Подтвердить</button>
+                            </div>
+                            {transactions.length > 0 ?
+                                <table className="table">
+                                    <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Отправитель</th>
+                                        <th>Получатель</th>
+                                        <th>Сумма</th>
+                                        <th>Статус</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>{txList}</tbody>
+                                </table> : null}
+                        </div> : null}
+                </div>
+            )
+        }
+    }
+
+    ReactDOM.render(
+        <div className="wrapper">
+            <div className="content container">
+                <App/>
+            </div>
+        </div>,
+        document.getElementById("root"));
+</script>
+<script defer src="public/lib/fontawesome-all.min.js"></script>
+</body>
+</html>
