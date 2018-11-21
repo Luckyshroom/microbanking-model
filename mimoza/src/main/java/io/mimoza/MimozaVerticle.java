@@ -77,7 +77,7 @@ public class MimozaVerticle extends MicrobankVerticle {
                 .rxListen(port, host)
                 .subscribe(SingleHelper.toObserver(ar -> {
                     if (ar.succeeded()) {
-                        LOGGER.info("Service " + SERVICE_NAME + " start at port: " + port);
+                        LOGGER.info("Service <" + SERVICE_NAME + "> start at port: " + port);
                     } else {
                         LOGGER.info(ar.cause().getMessage());
                     }

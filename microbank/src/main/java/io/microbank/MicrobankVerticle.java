@@ -107,23 +107,17 @@ public abstract class MicrobankVerticle extends AbstractVerticle {
         } else if (holderMap.size() == 1 && holderMap.containsKey("txTo")) {
             LOGGER.info("Dispatch withdraw processing...");
             Account txTo = accountMap.get(holderMap.get("txTo"));
-            if (txTo.getAmount() < tx.getTxAmount()) {
-                tx.setTxStatus(false);
-                txMap.put(txMap.size() + 1, tx);
-                txFail(context, tx);
-            } else {
-                dispatchRequest(context, "/ops/withdraw", serviceName, tx, txMap)
-                        .subscribe(SingleHelper.toObserver(ar -> {
-                            if (ar.succeeded()) {
-                                if (ar.result()) {
-                                    txTo.setAmount(txTo.getAmount() + tx.getTxAmount());
-                                    corrAccount.setAmount(corrAccount.getAmount() + tx.getTxAmount());
-                                }
-                            } else {
-                                notFound(context);
+            dispatchRequest(context, "/ops/withdraw", serviceName, tx, txMap)
+                    .subscribe(SingleHelper.toObserver(ar -> {
+                        if (ar.succeeded()) {
+                            if (ar.result()) {
+                                txTo.setAmount(txTo.getAmount() + tx.getTxAmount());
+                                corrAccount.setAmount(corrAccount.getAmount() + tx.getTxAmount());
                             }
-                        }));
-            }
+                        } else {
+                            notFound(context);
+                        }
+                    }));
         }
     }
 
