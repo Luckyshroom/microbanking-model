@@ -8,7 +8,6 @@ import io.vertx.core.Future;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.reactivex.CompletableHelper;
-import io.vertx.reactivex.SingleHelper;
 import io.vertx.reactivex.ext.web.Router;
 import io.vertx.reactivex.ext.web.handler.BodyHandler;
 import io.vertx.reactivex.ext.web.handler.StaticHandler;
@@ -46,6 +45,7 @@ public class MimozaVerticle extends MicrobankVerticle {
     }
 
     @Override
+    @SuppressWarnings("Duplicates")
     public void start(Future<Void> future) throws Exception {
         super.start();
 
@@ -73,14 +73,10 @@ public class MimozaVerticle extends MicrobankVerticle {
         publishHttpEndpoint(port, host, SERVICE_NAME).subscribe(CompletableHelper.toObserver(future));
 
         vertx.createHttpServer()
-                .requestHandler(router::accept)
+                .requestHandler(router)
                 .rxListen(port, host)
-                .subscribe(SingleHelper.toObserver(ar -> {
-                    if (ar.succeeded()) {
-                        LOGGER.info("Service <" + SERVICE_NAME + "> start at port: " + port);
-                    } else {
-                        LOGGER.info(ar.cause().getMessage());
-                    }
-                }));
+                .ignoreElement()
+                .subscribe(() -> LOGGER.info("Service <" + SERVICE_NAME + "> start at port: " + port),
+                        throwable -> LOGGER.info(throwable.getMessage()));
     }
 }

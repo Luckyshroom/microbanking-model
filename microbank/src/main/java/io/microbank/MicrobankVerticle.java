@@ -4,6 +4,7 @@ import io.microbank.models.Account;
 import io.microbank.models.Holder;
 import io.microbank.models.Transaction;
 import io.reactivex.Completable;
+import io.reactivex.Maybe;
 import io.reactivex.Observable;
 import io.reactivex.Single;
 import io.vertx.core.Future;
@@ -153,9 +154,10 @@ public abstract class MicrobankVerticle extends AbstractVerticle {
 
     protected Single<Boolean> dispatchRequest(RoutingContext context, String url, String serviceName, Transaction tx,
                                               Map<Integer, Transaction> transactionMap) {
-        return getEndpoint(serviceName).flatMap(ar -> WebClient.create(vertx)
-                .postAbs(ar.getLocation().getString("endpoint") + url)
-                .rxSendJsonObject(context.getBodyAsJson().put("isDelegated", true))
+        return getEndpoint(serviceName)
+                .flatMapSingle(ar -> WebClient.create(vertx)
+                        .postAbs(ar.getLocation().getString("endpoint") + url)
+                        .rxSendJsonObject(context.getBodyAsJson().put("isDelegated", true)))
                 .map(response -> {
                     if (response.statusCode() == 200) {
                         tx.setTxStatus(true);
@@ -168,7 +170,7 @@ public abstract class MicrobankVerticle extends AbstractVerticle {
                         txFail(context, tx);
                         return false;
                     }
-                }));
+                });
     }
 
     protected void getAccountList(RoutingContext context, Map<Holder, Account> accountMap) {
@@ -211,7 +213,7 @@ public abstract class MicrobankVerticle extends AbstractVerticle {
      *
      * @return async result
      */
-    protected Single<Record> getEndpoint(String serviceName) {
+    protected Maybe<Record> getEndpoint(String serviceName) {
         return serviceDiscovery.rxGetRecord(new JsonObject().put("name", serviceName));
     }
 
@@ -224,7 +226,7 @@ public abstract class MicrobankVerticle extends AbstractVerticle {
                 .doOnSuccess(ar -> {
                     registeredRecords.add(record);
                     LOGGER.info("Service <" + ar.getName() + "> published");
-                }).toCompletable();
+                }).ignoreElement();
     }
 
     protected Completable publishHttpEndpoint(int port, String host, String serviceName) {
